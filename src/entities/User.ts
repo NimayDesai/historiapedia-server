@@ -8,7 +8,10 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
+import { Article } from "./Article";
+import { ArticleLike } from "./ArticleLike";
 import { Comment } from "./Comment";
+import { Like } from "./Like";
 
 @ObjectType()
 @Entity()
@@ -25,17 +28,9 @@ export class User extends BaseEntity {
   @Column({ unique: true })
   email!: string;
 
-  @Column()
-  password!: string;
-
-  @OneToMany(() => Comment, (comment) => comment.creator)
-  comments: Comment[];
-
   @Field(() => String)
-  @CreateDateColumn()
   createdAt: Date;
 
   @Field(() => String)
-  @UpdateDateColumn()
   updatedAt: Date;
 }

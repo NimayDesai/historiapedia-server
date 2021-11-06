@@ -9,13 +9,14 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
-import { Article } from "./Article";
+import { ArticleLike } from "./ArticleLike";
+import { Comment } from "./Comment";
 import { Like } from "./Like";
 import { User } from "./User";
 
 @ObjectType()
 @Entity()
-export class Comment extends BaseEntity {
+export class Article extends BaseEntity {
   @Field(() => Int)
   id!: number;
 
@@ -34,14 +35,11 @@ export class Comment extends BaseEntity {
   @Field()
   creatorId: number;
 
-  @Field()
-  articleId: number;
-
   @Field(() => User)
   creator: User;
 
-  @Field(() => Article)
-  article: Article;
+  @Field(() => [Comment])
+  comments: Comment[];
 
   @Field(() => String)
   createdAt: Date;

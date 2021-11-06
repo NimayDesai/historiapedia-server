@@ -15,6 +15,8 @@ import { getConnection } from "typeorm";
 import { MyContext } from "../types";
 import { UsernamePasswordInput } from "./UsernamePasswordInput";
 import { validateRegister } from "../utils/validateRegister";
+import { user } from "@prisma/client";
+import { prisma } from "../prisma";
 
 @ObjectType()
 class FieldError {
@@ -30,11 +32,98 @@ class UserResponse {
   @Field(() => [FieldError], { nullable: true })
   errors?: FieldError[];
   @Field(() => User, { nullable: true })
-  user?: User;
+  user?: user | null;
 }
 
 @Resolver(User)
 export class UserResolver {
+  @Mutation(() => UserResponse)
+  async changeUser(
+    @Arg("options") options: UsernamePasswordInput,
+    @Ctx() { req }: MyContext
+  ): Promise<UserResponse> {
+    let newEmail;
+    let newUsername;
+    let newPassword;
+    const userId = req.session.userId;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!userId) {
+      return {
+        errors: [
+          {
+            field: "username",
+            message: "You are not logged in",
+          },
+        ],
+      };
+    }
+    if (!options.email) {
+      newEmail = user?.email;
+    } else if (options.email.length <= 2 && options.email.length >= 1) {
+      return {
+        errors: [
+          {
+            field: "email",
+            message: "Length of email must be at least 3 characters",
+          },
+        ],
+      };
+    } else {
+      newEmail = options.email;
+    }
+
+    if (!options.username) {
+      newUsername = user?.username;
+    } else if (options.username.length <= 2 && options.username.length >= 1) {
+      return {
+        errors: [
+          {
+            field: "username",
+            message: "Length of username must be at least 3 characters",
+          },
+        ],
+      };
+    } else {
+      newUsername = options.username;
+    }
+
+    if (!options.password) {
+      newPassword = user?.password;
+    } else if (options.password.length <= 2 && options.password.length >= 1) {
+      return {
+        errors: [
+          {
+            field: "username",
+            message: "Length of username must be at least 3 characters",
+          },
+        ],
+      };
+    } else {
+      const hashedNewPassword = await argon2.hash(options.password);
+      newPassword = hashedNewPassword;
+    }
+
+    try {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { email: newEmail, password: newPassword, username: newUsername },
+      });
+    } catch (err) {
+      if (err.code === "23505") {
+        return {
+          errors: [
+            {
+              field: "username",
+              message: "Username already exists",
+            },
+          ],
+        };
+      }
+    }
+
+    return { user };
+  }
+
   @FieldResolver(() => String)
   email(@Root() user: User, @Ctx() { req }: MyContext) {
     if (req.session.userId === user.id) {
@@ -50,7 +139,7 @@ export class UserResolver {
       return null;
     }
 
-    return User.findOne(req.session.userId);
+    return prisma.user.findUnique({ where: { id: req.session.userId } });
   }
 
   @Mutation(() => UserResponse)
@@ -66,20 +155,15 @@ export class UserResolver {
     const hashedPassword = await argon2.hash(options.password);
     let user;
     try {
-      const result = await getConnection()
-        .createQueryBuilder()
-        .insert()
-        .into(User)
-        .values({
+      user = await prisma.user.create({
+        data: {
           username: options.username,
           password: hashedPassword,
           email: options.email,
-        })
-        .returning("*")
-        .execute();
-      user = result.raw[0];
+        },
+      });
     } catch (err) {
-      if (err.code === "23505") {
+      if (err.code === "P2002") {
         return {
           errors: [
             {
@@ -90,9 +174,10 @@ export class UserResolver {
         };
       }
       console.log("message", err.message);
+      console.log("data", err);
     }
 
-    req.session.userId = user.id;
+    req.session.userId = user?.id;
 
     return { user };
   }
@@ -103,11 +188,11 @@ export class UserResolver {
     @Arg("password") password: string,
     @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
-    const user = await User.findOne(
-      usernameOrEmail.includes("@")
+    const user = await prisma.user.findUnique({
+      where: usernameOrEmail.includes("@")
         ? { email: usernameOrEmail }
-        : { username: usernameOrEmail }
-    );
+        : { username: usernameOrEmail },
+    });
     if (!user) {
       return {
         errors: [

@@ -1,0 +1,78 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// generator typegraphql {
+//   provider = "typegraphql-prisma"
+// }
+
+model article {
+  id           Int            @id(map: "PK_40808690eb7b915046558c0f81b") @default(autoincrement())
+  title        String         @db.VarChar
+  text         String         @db.VarChar
+  points       Int            @default(0)
+  creatorId    Int
+  createdAt    DateTime       @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime       @default(now()) @db.Timestamp(6)
+  creator         user           @relation(fields: [creatorId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_73bd593f880a989870fa0b70ee3")
+  article_like article_like[]
+  comments      comment[]
+}
+
+model article_like {
+  value     Int
+  userId    Int
+  articleId Int
+  article   article @relation(fields: [articleId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_a436ab6e04141e82716fa5de359")
+  user      user    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_36fe87c54892234d74f641b60a4")
+
+  @@id([userId, articleId], map: "PK_a5d5b31b5440727623f8a901917")
+}
+
+model comment {
+  id        Int      @id(map: "PK_0b0e4bbc8415ec426f87f3a88e2") @default(autoincrement())
+  title     String   @db.VarChar
+  text      String   @db.VarChar
+  points    Int      @default(0)
+  creatorId Int
+  articleId Int
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @default(now()) @db.Timestamp(6)
+  article   article  @relation(fields: [articleId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_c20404221e5c125a581a0d90c0e")
+  creator      user     @relation(fields: [creatorId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_b6bf60ecb9f6c398e349adff52f")
+  like      like[]
+}
+
+model like {
+  value     Int
+  userId    Int
+  commentId Int
+  comment   comment @relation(fields: [commentId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_d86e0a3eeecc21faa0da415a18a")
+  user      user    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_e8fb739f08d47955a39850fac23")
+
+  @@id([userId, commentId], map: "PK_3a063d4952039809428988bb852")
+}
+
+model migrations {
+  id        Int    @id(map: "PK_8c82d7f526340ab734260ea46be") @default(autoincrement())
+  timestamp BigInt
+  name      String @db.VarChar
+}
+
+model user {
+  id           Int            @id(map: "PK_cace4a159ff9f2512dd42373760") @default(autoincrement())
+  username     String         @unique(map: "UQ_78a916df40e02a9deb1c4b75edb") @db.VarChar
+  email        String         @unique(map: "UQ_e12875dfb3b1d92d7d7c5377e22") @db.VarChar
+  password     String         @db.VarChar
+  createdAt    DateTime       @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime       @default(now()) @db.Timestamp(6)
+  article      article[]
+  article_like article_like[]
+  comment      comment[]
+  like         like[]
+}

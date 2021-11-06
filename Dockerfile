@@ -10,6 +10,7 @@ COPY . .
 COPY .env.production .env
 
 RUN npm run build
+RUN npm run deploy
 
 ENV NODE_ENV production
 

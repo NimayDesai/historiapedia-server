@@ -14,18 +14,23 @@ import session from "express-session";
 import connectRedis from "connect-redis";
 import { __prod__ } from "./constants";
 import path from "path";
+import { Like } from "./entities/Like";
+import { Article } from "./entities/Article";
+import { ArticleLike } from "./entities/ArticleLike";
+import { ArticleResolver } from "./resolvers/article";
 
 const main = async () => {
-  const conn = await createConnection({
-    type: "postgres",
-    url: process.env.DATABASE_URL,
-    logging: true,
-    // synchronize: true,
-    migrations: [path.join(__dirname, "./migrations/*")],
-    entities: [Comment, User],
-  });
+  // const conn = await createConnection({
+  //   type: "postgres",
+  //   url: process.env.DATABASE_URL,
+  //   logging: true,
+  //   // synchronize: true,
+  //   migrations: [path.join(__dirname, "./migrations/*")],
+  //   entities: [Comment, User, Like, Article, ArticleLike],
+  // });
 
-  await conn.runMigrations();
+  // await conn.dropDatabase();
+  // await conn.runMigrations();
 
   const app = express();
 
@@ -52,7 +57,12 @@ const main = async () => {
 
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [HelloResolver, CommentResolver, UserResolver],
+      resolvers: [
+        HelloResolver,
+        CommentResolver,
+        UserResolver,
+        ArticleResolver,
+      ],
       validate: false,
     }),
     context: ({ req, res }) => ({ req, res, redis }),
